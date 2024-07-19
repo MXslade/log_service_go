@@ -20,9 +20,10 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-    log.Println("Initializing db connection pool")
-    db.InitDBPool()
-    defer db.CloseDBPool()
+	log.Println("Initializing db connection pool")
+	db.InitDBPool()
+	defer db.CloseDBPool()
+    db.RunMigrations();
 
 	log.Println("Initializing echo")
 	e := echo.New()

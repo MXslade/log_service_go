@@ -7,27 +7,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-var connPool *pgxpool.Pool
-
-func InitDBPool() {
-	var err error
-	connPool, err = pgxpool.NewWithConfig(context.Background(), dbConfig())
-	if err != nil {
-		log.Fatalf("Error. Couldn't crate connection pool to db. %v\n", err)
-	}
-}
-
-func CloseDBPool() {
-	if connPool == nil {
-		log.Fatalln("Error. Connection pool was not initialized")
-	}
-	connPool.Close()
-}
 
 type dbEnv struct {
 	host     string
@@ -46,6 +32,48 @@ func (d dbEnv) getDbUrl() string {
 		d.port,
 		d.dbName,
 	)
+}
+
+func (d dbEnv) getDbMigrationUrl() string {
+	return fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
+		d.user,
+		d.password,
+		d.host,
+		d.port,
+		d.dbName,
+	)
+}
+
+var connPool *pgxpool.Pool
+
+func InitDBPool() {
+	var err error
+	connPool, err = pgxpool.NewWithConfig(context.Background(), dbConfig())
+	if err != nil {
+		log.Fatalf("Error. Couldn't crate connection pool to db. %v\n", err)
+	}
+}
+
+func CloseDBPool() {
+	if connPool == nil {
+		log.Fatalln("Error. Connection pool was not initialized")
+	}
+	connPool.Close()
+}
+
+func RunMigrations() {
+	dbEnvInstance := getDbEnv()
+	m, err := migrate.New(
+		"file://db/migrations", dbEnvInstance.getDbMigrationUrl())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := m.Up(); err != nil {
+		log.Println("Migration status: ", err)
+		if err.Error() != "no change" {
+			log.Fatal(err)
+		}
+	}
 }
 
 func dbConfig() *pgxpool.Config {
@@ -87,6 +115,8 @@ func dbConfig() *pgxpool.Config {
 	config.BeforeClose = func(c *pgx.Conn) {
 		log.Println("Closed the connection pool to the database!!")
 	}
+
+	log.Println("connection string: ", dbEnvInstance.getDbUrl())
 
 	return config
 }

@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS app_envs;
+
+DROP TABLE IF EXISTS apps;
