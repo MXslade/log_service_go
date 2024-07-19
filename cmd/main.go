@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/MXslade/log_service_go/config"
+	"github.com/MXslade/log_service_go/db"
 	"github.com/MXslade/log_service_go/route"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -18,6 +19,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+    log.Println("Initializing db connection pool")
+    db.InitDBPool()
+    defer db.CloseDBPool()
 
 	log.Println("Initializing echo")
 	e := echo.New()
