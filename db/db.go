@@ -68,12 +68,10 @@ func RunMigrations() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := m.Up(); err != nil {
-		log.Println("Migration status: ", err)
-		if err.Error() != "no change" {
-			log.Fatal(err)
-		}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatal(err)
 	}
+    log.Println("Migration status: up to date")
 }
 
 func dbConfig() *pgxpool.Config {
