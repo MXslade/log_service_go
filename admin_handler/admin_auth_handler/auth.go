@@ -1,9 +1,10 @@
 package admin_auth_handler
 
 import (
-	"log"
+	"errors"
 	"net/http"
 
+	"github.com/MXslade/log_service_go/service/jwt_service"
 	"github.com/labstack/echo/v4"
 )
 
@@ -20,7 +21,20 @@ func Login(c echo.Context) error {
 		return err
 	}
 
-	log.Printf("%+v: ", data)
+	token, err := jwt_service.Login(
+		c.Request().Context(),
+		jwt_service.LoginData{
+			Username: data.Username,
+			Password: data.Password,
+		},
+	)
+	if err != nil {
+		if errors.Is(err, echo.ErrUnauthorized) {
+			return err
+		} else {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
+		}
+	}
 
-	return c.JSON(http.StatusOK, echo.Map{"token": "token"})
+	return c.JSON(http.StatusOK, echo.Map{"token": token})
 }

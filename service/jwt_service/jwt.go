@@ -1,7 +1,7 @@
 package jwt_service
 
 import (
-	"net/http"
+	"context"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,6 +15,11 @@ type jwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
+type LoginData struct {
+	Username string
+	Password string
+}
+
 func CreateConfig() echojwt.Config {
 	return echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
@@ -24,16 +29,13 @@ func CreateConfig() echojwt.Config {
 	}
 }
 
-func login(c echo.Context) error {
-	username := c.FormValue("username")
-	password := c.FormValue("password")
-
-	if username != "jon" || password != "shhh!" {
-		return echo.ErrUnauthorized
+func Login(ctx context.Context, loginData LoginData) (string, error) {
+	if loginData.Username != "admin" || loginData.Password != "password" {
+		return "", echo.ErrUnauthorized
 	}
 
 	claims := &jwtCustomClaims{
-		"Jon Snow",
+		"Admin Adminov",
 		true,
 		jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72))},
 	}
@@ -42,8 +44,8 @@ func login(c echo.Context) error {
 
 	t, err := token.SignedString([]byte("secret"))
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"token": t})
+	return t, nil
 }
