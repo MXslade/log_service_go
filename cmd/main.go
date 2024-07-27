@@ -19,6 +19,11 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	log.Println("Initializing db connection pool")
+	db.InitDBPool()
+	defer db.CloseDBPool()
+	db.RunMigrations()
+
 	mode := flag.String("mode", "server", "Defines the mode of the application. \n\"server\": when you want to run a server.\n \"admin_cli\": when you want to run admin cli(you can create admin user there)\n.")
 	flag.Parse()
 	if mode == nil {
@@ -32,10 +37,6 @@ func main() {
 		admin_cli.Start()
 	} else if *mode == "server" {
 		log.Println("Running SERVER app")
-		log.Println("Initializing db connection pool")
-		db.InitDBPool()
-		defer db.CloseDBPool()
-		db.RunMigrations()
 
 		log.Println("Initializing echo")
 		e := echo.New()
