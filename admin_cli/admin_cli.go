@@ -20,7 +20,7 @@ func Start() {
 		text = strings.TrimSpace(text)
 		switch text {
 		case "1":
-			createAdmin()
+			createAdmin(reader)
 		case "2":
 			removeAdmin()
 		case "0":
@@ -40,7 +40,24 @@ func printMainMenu() {
 	fmt.Print("Your choice: ")
 }
 
-func createAdmin() {
+func createAdmin(reader *bufio.Reader) {
+	fmt.Println()
+	fmt.Print("Username: ")
+	username, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+	}
+
+	fmt.Print("Password: ")
+	password, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+	}
+
+	username = strings.TrimSpace(username)
+	password = strings.TrimSpace(password)
+
+	fmt.Printf("Username: %v, Password: %v\n", username, password)
 }
 
 func removeAdmin() {

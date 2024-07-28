@@ -71,7 +71,14 @@ func RunMigrations() {
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatal(err)
 	}
-    log.Println("Migration status: up to date")
+	log.Println("Migration status: up to date")
+}
+
+func AcquireConnection(ctx context.Context) (*pgxpool.Conn, error) {
+	if connPool == nil {
+		log.Fatalln("Error. Connection pool was not initialized")
+	}
+	return connPool.Acquire(ctx)
 }
 
 func dbConfig() *pgxpool.Config {
