@@ -34,7 +34,8 @@ func main() {
 
 	if *mode == "admin_cli" {
 		log.Println("Running ADMIN CLI app")
-		admin_cli.Start()
+		adminCliApp := admin_cli.New()
+		adminCliApp.Start()
 	} else if *mode == "server" {
 		log.Println("Running SERVER app")
 

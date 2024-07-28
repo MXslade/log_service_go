@@ -2,17 +2,29 @@ package admin_cli
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/MXslade/log_service_go/db/repo/admin_repo"
 )
 
-func Start() {
-	reader := bufio.NewReader(os.Stdin)
+type AdminCli struct {
+	reader    *bufio.Reader
+	adminRepo admin_repo.AdminRepo
+}
 
+func New() *AdminCli {
+	reader := bufio.NewReader(os.Stdin)
+	adminRepo := admin_repo.New()
+	return &AdminCli{reader, adminRepo}
+}
+
+func (a *AdminCli) Start() {
 	for {
 		printMainMenu()
-		text, err := reader.ReadString('\n')
+		text, err := a.reader.ReadString('\n')
 		if err != nil {
 			fmt.Printf("err: %v\n", err)
 			os.Exit(1)
@@ -20,9 +32,11 @@ func Start() {
 		text = strings.TrimSpace(text)
 		switch text {
 		case "1":
-			createAdmin(reader)
+			a.createAdmin()
 		case "2":
-			removeAdmin()
+			a.removeAdmin()
+		case "3":
+			a.showAllAdmins()
 		case "0":
 			return
 		default:
@@ -36,20 +50,21 @@ func printMainMenu() {
 	fmt.Println("Choose one of the following: ")
 	fmt.Println("1. Create Admin")
 	fmt.Println("2. Remove Admin")
+	fmt.Println("3. Show all Admins")
 	fmt.Println("0. Exit")
 	fmt.Print("Your choice: ")
 }
 
-func createAdmin(reader *bufio.Reader) {
+func (a *AdminCli) createAdmin() {
 	fmt.Println()
 	fmt.Print("Username: ")
-	username, err := reader.ReadString('\n')
+	username, err := a.reader.ReadString('\n')
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
 	}
 
 	fmt.Print("Password: ")
-	password, err := reader.ReadString('\n')
+	password, err := a.reader.ReadString('\n')
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
 	}
@@ -60,5 +75,22 @@ func createAdmin(reader *bufio.Reader) {
 	fmt.Printf("Username: %v, Password: %v\n", username, password)
 }
 
-func removeAdmin() {
+func (a *AdminCli) removeAdmin() {
+}
+
+func (a *AdminCli) showAllAdmins() {
+	admins, err := a.adminRepo.GetAll(context.Background())
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return
+	}
+
+    if len(admins) == 0 {
+        fmt.Println("You don't have any admins.\n")
+    }
+
+	for idx, admin := range admins {
+		fmt.Printf("%v. ID: %v, Name: %v\n", idx, admin.ID, admin.Name)
+	}
+	fmt.Println()
 }
