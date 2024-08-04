@@ -85,12 +85,12 @@ func (a *AdminCli) showAllAdmins() {
 		return
 	}
 
-    if len(admins) == 0 {
-        fmt.Println("You don't have any admins.\n")
-    }
+	if len(admins) == 0 {
+		fmt.Print("You don't have any admins.\n\n")
+	}
 
 	for idx, admin := range admins {
-		fmt.Printf("%v. ID: %v, Name: %v\n", idx, admin.ID, admin.Name)
+		fmt.Printf("%v. ID: %v, Username: %v\n", idx, admin.ID, admin.Username)
 	}
 	fmt.Println()
 }
