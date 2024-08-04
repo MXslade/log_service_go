@@ -30,6 +30,7 @@ type AdminRepo interface {
 	GetAll(ctx context.Context) ([]*AdminSafeModel, error)
 	GetById(ctx context.Context, id uuid.UUID) error
 	Create(ctx context.Context, data CreateAdmin) (*AdminSafeModel, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 type adminRepo struct {
@@ -91,4 +92,20 @@ func (a *adminRepo) Create(ctx context.Context, data CreateAdmin) (*AdminSafeMod
 	}
 
 	return &admin, nil
+}
+
+func (a *adminRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	conn, err := db.AcquireConnection(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(ctx, "DELETE FROM admins WHERE id=$1", id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

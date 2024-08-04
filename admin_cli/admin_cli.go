@@ -3,9 +3,11 @@ package admin_cli
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/MXslade/log_service_go/db/repo/admin_repo"
@@ -60,8 +62,7 @@ func printMainMenu() {
 }
 
 func (a *AdminCli) createAdmin() {
-	fmt.Println()
-	fmt.Print("Username: ")
+	fmt.Print("\nUsername: ")
 	username, err := a.reader.ReadString('\n')
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
@@ -90,6 +91,43 @@ func (a *AdminCli) createAdmin() {
 }
 
 func (a *AdminCli) removeAdmin() {
+	fmt.Print("\nChoose the index of the admin to remove\n")
+	ctx := context.Background()
+	admins, err := a.adminRepo.GetAll(ctx)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return
+	}
+
+	if len(admins) == 0 {
+		fmt.Print("You don't have any admins.\n\n")
+		return
+	}
+
+	for idx, admin := range admins {
+		fmt.Printf("%v. Username: %v\n", idx, admin.Username)
+	}
+
+	fmt.Print("\nYour choice:")
+	choice, err := a.reader.ReadString('\n')
+	choiceNum, err := strconv.Atoi(strings.TrimSpace(choice))
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return
+	}
+
+	if choiceNum < 0 && choiceNum >= len(admins) {
+		fmt.Println("Your choice is out of bounds.")
+		return
+	}
+
+	err = a.adminRepo.Delete(ctx, admins[choiceNum].ID)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return
+	}
+
+	fmt.Println("Deleted!")
 }
 
 func (a *AdminCli) showAllAdmins() {
@@ -101,10 +139,17 @@ func (a *AdminCli) showAllAdmins() {
 
 	if len(admins) == 0 {
 		fmt.Print("You don't have any admins.\n\n")
+		return
 	}
 
 	for idx, admin := range admins {
-		fmt.Printf("%v. ID: %v, Username: %v\n", idx, admin.ID, admin.Username)
+		value, err := admin.ID.UUIDValue()
+		if err != nil {
+			fmt.Printf("err: %v\n", err)
+			return
+		}
+		id := hex.EncodeToString(value.Bytes[:])
+		fmt.Printf("%v. ID: %v, Username: %v\n", idx, id, admin.Username)
 	}
 	fmt.Println()
 }
