@@ -29,6 +29,7 @@ type CreateAdmin struct {
 type AdminRepo interface {
 	GetAll(ctx context.Context) ([]*AdminSafeModel, error)
 	GetById(ctx context.Context, id uuid.UUID) error
+	GetByUsername(ctx context.Context, username string) (*AdminModel, error)
 	Create(ctx context.Context, data CreateAdmin) (*AdminSafeModel, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -68,6 +69,26 @@ func (a *adminRepo) GetAll(ctx context.Context) ([]*AdminSafeModel, error) {
 
 func (a *adminRepo) GetById(ctx context.Context, id uuid.UUID) error {
 	return nil
+}
+
+func (a *adminRepo) GetByUsername(ctx context.Context, username string) (*AdminModel, error) {
+	conn, err := db.AcquireConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	var admin AdminModel
+	err = conn.QueryRow(
+		ctx,
+		"SELECT id, username, password FROM admins WHERE username=$1",
+		username,
+	).Scan(&admin.ID, &admin.Username, &admin.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return &admin, nil
 }
 
 func (a *adminRepo) Create(ctx context.Context, data CreateAdmin) (*AdminSafeModel, error) {

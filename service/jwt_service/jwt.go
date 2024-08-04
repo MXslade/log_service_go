@@ -4,14 +4,16 @@ import (
 	"context"
 	"time"
 
+	"github.com/MXslade/log_service_go/db/repo/admin_repo"
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 )
 
+const JwtExpiresAfterHours = 72
+
 type jwtCustomClaims struct {
-	Name  string `json:"name"`
-	Admin bool   `json:"admin"`
+	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
@@ -29,15 +31,10 @@ func CreateConfig() echojwt.Config {
 	}
 }
 
-func Login(ctx context.Context, loginData LoginData) (string, error) {
-	if loginData.Username != "admin" || loginData.Password != "password" {
-		return "", echo.ErrUnauthorized
-	}
-
+func CreateToken(ctx context.Context, admin *admin_repo.AdminModel) (string, error) {
 	claims := &jwtCustomClaims{
-		"Admin Adminov",
-		true,
-		jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72))},
+		admin.Username,
+		jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * JwtExpiresAfterHours))},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
