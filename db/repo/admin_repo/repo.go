@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/MXslade/log_service_go/db"
+	"github.com/MXslade/log_service_go/service/auth_service"
 	uuid "github.com/jackc/pgx-gofrs-uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -28,14 +29,19 @@ type CreateAdmin struct {
 type AdminRepo interface {
 	GetAll(ctx context.Context) ([]*AdminSafeModel, error)
 	GetById(ctx context.Context, id uuid.UUID) error
-	Create(ctx context.Context, data CreateAdmin) (*AdminModel, error)
+	Create(ctx context.Context, data CreateAdmin) (*AdminSafeModel, error)
 }
 
 type adminRepo struct {
+	authService auth_service.AuthService
 }
 
-func New() *adminRepo {
-	return &adminRepo{}
+func New() (*adminRepo, error) {
+	authService, err := auth_service.New()
+	if err != nil {
+		return nil, err
+	}
+	return &adminRepo{authService: authService}, nil
 }
 
 func (a *adminRepo) GetAll(ctx context.Context) ([]*AdminSafeModel, error) {
@@ -52,7 +58,7 @@ func (a *adminRepo) GetAll(ctx context.Context) ([]*AdminSafeModel, error) {
 		return &admin, err
 	})
 	if err != nil {
-		log.Printf("err: %v", err)
+		log.Printf("err: %v\n", err)
 		return nil, err
 	}
 
@@ -63,12 +69,26 @@ func (a *adminRepo) GetById(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (a *adminRepo) Create(ctx context.Context, data CreateAdmin) (*AdminModel, error) {
+func (a *adminRepo) Create(ctx context.Context, data CreateAdmin) (*AdminSafeModel, error) {
 	conn, err := db.AcquireConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Release()
 
-	return nil, nil
+	hashedPassword := a.authService.HashPassword(data.Password)
+
+	var admin AdminSafeModel
+	err = conn.QueryRow(
+		ctx,
+		"INSERT INTO admins (username, password) VALUES($1, $2) RETURNING id, username;",
+		data.Username, hashedPassword,
+	).Scan(&admin.ID, &admin.Username)
+
+	if err != nil {
+		log.Printf("Admin Repo Create Error: %v\n", err)
+		return nil, err
+	}
+
+	return &admin, nil
 }

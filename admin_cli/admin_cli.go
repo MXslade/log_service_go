@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -17,7 +18,10 @@ type AdminCli struct {
 
 func New() *AdminCli {
 	reader := bufio.NewReader(os.Stdin)
-	adminRepo := admin_repo.New()
+	adminRepo, err := admin_repo.New()
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
 	return &AdminCli{reader, adminRepo}
 }
 
@@ -72,7 +76,17 @@ func (a *AdminCli) createAdmin() {
 	username = strings.TrimSpace(username)
 	password = strings.TrimSpace(password)
 
-	fmt.Printf("Username: %v, Password: %v\n", username, password)
+	result, err := a.adminRepo.Create(
+		context.Background(),
+		admin_repo.CreateAdmin{Username: username, Password: password},
+	)
+
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return
+	}
+
+	fmt.Printf("New Admin: %+v\n\n", result)
 }
 
 func (a *AdminCli) removeAdmin() {

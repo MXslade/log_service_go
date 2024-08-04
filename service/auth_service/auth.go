@@ -1,7 +1,6 @@
 package auth_service
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -10,8 +9,8 @@ import (
 )
 
 type AuthService interface {
-	HashPassword(ctx context.Context, password string) string
-	VerifyHash(ctx context.Context, toHash string, actualHash string) bool
+	HashPassword(password string) string
+	VerifyHash(toHash string, actualHash string) bool
 }
 
 type authService struct {
@@ -27,14 +26,14 @@ func New() (*authService, error) {
 	return &authService{secret: secret, h: sha256.New()}, nil
 }
 
-func (a *authService) HashPassword(ctx context.Context, password string) string {
+func (a *authService) HashPassword(password string) string {
 	a.h.Write([]byte(password + a.secret))
 	result := a.h.Sum(nil)
 	a.h.Reset()
 	return hex.EncodeToString(result)
 }
 
-func (a *authService) VerifyHash(ctx context.Context, toHash string, actualHash string) bool {
+func (a *authService) VerifyHash(toHash string, actualHash string) bool {
 	a.h.Write([]byte(toHash + a.secret))
 	result := a.h.Sum(nil)
 	a.h.Reset()
