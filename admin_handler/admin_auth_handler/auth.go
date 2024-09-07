@@ -1,12 +1,11 @@
 package admin_auth_handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
-	"github.com/MXslade/log_service_go/db/repo/admin_repo"
-	"github.com/MXslade/log_service_go/service/auth_service"
-	"github.com/MXslade/log_service_go/service/jwt_service"
+	"github.com/MXslade/log_service_go/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -16,7 +15,33 @@ type loginData struct {
 	Password string `json:"password"`
 }
 
-func Login(c echo.Context) error {
+type adminRepo interface {
+	GetByUsername(ctx context.Context, username string) (*model.AdminModel, error)
+}
+
+type authService interface {
+	VerifyHash(toHash string, actualHash string) bool
+}
+
+type jwtService interface {
+	CreateToken(ctx context.Context, admin *model.AdminModel) (string, error)
+}
+
+type authHandler struct {
+	adminRepo   adminRepo
+	authService authService
+	jwtService  jwtService
+}
+
+func New(adminRepo adminRepo, authService authService, jwtService jwtService) *authHandler {
+	return &authHandler{
+		adminRepo:   adminRepo,
+		authService: authService,
+		jwtService:  jwtService,
+	}
+}
+
+func (h *authHandler) Login(c echo.Context) error {
 	var data loginData
 
 	if err := c.Bind(&data); err != nil {
@@ -24,13 +49,7 @@ func Login(c echo.Context) error {
 		return err
 	}
 
-	adminRepo, err := admin_repo.New()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
-		return err
-	}
-
-	admin, err := adminRepo.GetByUsername(c.Request().Context(), data.Username)
+	admin, err := h.adminRepo.GetByUsername(c.Request().Context(), data.Username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			c.JSON(http.StatusNotFound, echo.Map{"error": err})
@@ -41,23 +60,18 @@ func Login(c echo.Context) error {
 		}
 	}
 
-	authService, err := auth_service.New()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
-		return err
-	}
-
-	ok := authService.VerifyHash(data.Password, admin.Password)
+	ok := h.authService.VerifyHash(data.Password, admin.Password)
 	if !ok {
 		return echo.ErrUnauthorized
 	}
 
-	token, err := jwt_service.CreateToken(
+	token, err := h.jwtService.CreateToken(
 		c.Request().Context(),
 		admin,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
+		c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
+		return err
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{"token": token})
