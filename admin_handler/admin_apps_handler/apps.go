@@ -1,16 +1,28 @@
 package admin_apps_handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
-	"github.com/MXslade/log_service_go/db/repo/app_repo"
+	model_app "github.com/MXslade/log_service_go/model/app_model"
 	"github.com/labstack/echo/v4"
 )
 
-func Index(c echo.Context) error {
-	appRepo := app_repo.New()
+type appRepo interface {
+	GetAll(ctx context.Context) ([]*model_app.AppModel, error)
+	GetAllWithEnvs(ctx context.Context) ([]*model_app.AppWithEnvs, error)
+}
 
+type appsHandler struct {
+	appRepo appRepo
+}
+
+func New(appRepo appRepo) *appsHandler {
+	return &appsHandler{appRepo: appRepo}
+}
+
+func (h *appsHandler) Index(c echo.Context) error {
 	withEnvs := c.QueryParam("withEnvs")
 	if len(withEnvs) > 0 {
 		withEnvsParsed, err := strconv.ParseBool(withEnvs)
@@ -19,7 +31,7 @@ func Index(c echo.Context) error {
 			return err
 		}
 		if withEnvsParsed {
-			apps, err := appRepo.GetAllWithEnvs(c.Request().Context())
+			apps, err := h.appRepo.GetAllWithEnvs(c.Request().Context())
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
 				return err
@@ -29,7 +41,7 @@ func Index(c echo.Context) error {
 		}
 	}
 
-	apps, err := appRepo.GetAll(c.Request().Context())
+	apps, err := h.appRepo.GetAll(c.Request().Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
 		return err
@@ -37,18 +49,18 @@ func Index(c echo.Context) error {
 	return c.JSON(http.StatusOK, apps)
 }
 
-func Create(c echo.Context) error {
+func (h *appsHandler) Create(c echo.Context) error {
 	return c.String(http.StatusCreated, "apps: Create")
 }
 
-func Show(c echo.Context) error {
+func (h *appsHandler) Show(c echo.Context) error {
 	return c.String(http.StatusOK, "apps: Show")
 }
 
-func Update(c echo.Context) error {
+func (h *appsHandler) Update(c echo.Context) error {
 	return c.String(http.StatusOK, "apps: Update")
 }
 
-func Delete(c echo.Context) error {
+func (h *appsHandler) Delete(c echo.Context) error {
 	return c.String(http.StatusOK, "apps: Delete")
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/MXslade/log_service_go/admin_handler/admin_apps_handler"
 	"github.com/MXslade/log_service_go/admin_handler/admin_auth_handler"
 	"github.com/MXslade/log_service_go/db/repo/admin_repo"
+	"github.com/MXslade/log_service_go/db/repo/app_repo"
 	"github.com/MXslade/log_service_go/handler/apps_handler"
 	"github.com/MXslade/log_service_go/service/auth_service"
 	"github.com/MXslade/log_service_go/service/jwt_service"
@@ -19,6 +20,7 @@ func SetUpRoutes(e *echo.Echo) error {
 		fmt.Printf("adminRepo error: %v", err)
 		return err
 	}
+	appRepo := app_repo.New()
 	authService, err := auth_service.New()
 	if err != nil {
 		fmt.Printf("authService error: %v", err)
@@ -54,12 +56,13 @@ func SetUpRoutes(e *echo.Echo) error {
 	v1AdminApiGroup.Use(echojwt.WithConfig(jwtService.CreateConfig()))
 	{
 		appsGroup := v1AdminApiGroup.Group("/apps")
+		adminAppsHandler := admin_apps_handler.New(appRepo)
 		{
-			appsGroup.GET("", admin_apps_handler.Index)
-			appsGroup.POST("", admin_apps_handler.Create)
-			appsGroup.GET("/:id", admin_apps_handler.Show)
-			appsGroup.PUT("/:id", admin_apps_handler.Update)
-			appsGroup.DELETE("/:id", admin_apps_handler.Delete)
+			appsGroup.GET("", adminAppsHandler.Index)
+			appsGroup.POST("", adminAppsHandler.Create)
+			appsGroup.GET("/:id", adminAppsHandler.Show)
+			appsGroup.PUT("/:id", adminAppsHandler.Update)
+			appsGroup.DELETE("/:id", adminAppsHandler.Delete)
 		}
 	}
 
