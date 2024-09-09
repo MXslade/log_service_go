@@ -11,11 +11,12 @@ import (
 	"strings"
 
 	"github.com/MXslade/log_service_go/db/repo/admin_repo"
+	"github.com/MXslade/log_service_go/model"
 )
 
 type AdminCli struct {
 	reader    *bufio.Reader
-	adminRepo admin_repo.AdminRepo
+	adminRepo *admin_repo.AdminRepo
 }
 
 func New() *AdminCli {
@@ -79,7 +80,7 @@ func (a *AdminCli) createAdmin() {
 
 	result, err := a.adminRepo.Create(
 		context.Background(),
-		admin_repo.CreateAdmin{Username: username, Password: password},
+		model.CreateAdmin{Username: username, Password: password},
 	)
 
 	if err != nil {

@@ -2,6 +2,7 @@ package app_repo
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/MXslade/log_service_go/db"
 	uuid "github.com/jackc/pgx-gofrs-uuid"
@@ -22,7 +23,7 @@ type AppEnvModel struct {
 
 type AppWithEnvs struct {
 	AppModel
-	envs []*AppEnvModel
+	Envs []*AppEnvModel
 }
 
 type CreateApp struct {
@@ -30,22 +31,14 @@ type CreateApp struct {
 	Description string
 }
 
-type AppRepo interface {
-	GetAll(ctx context.Context) ([]*AppModel, error)
-	GetAllWithEnvs(ctx context.Context) ([]*AppWithEnvs, error)
-	Create(ctx context.Context, data CreateApp) (*AppModel, error)
-	GetByID(ctx context.Context, id uuid.UUID) (*AppModel, error)
-	GetByIDWithEnvs(ctx context.Context, id uuid.UUID) (*AppWithEnvs, error)
+type AppRepo struct {
 }
 
-type appRepo struct {
+func New() *AppRepo {
+	return &AppRepo{}
 }
 
-func New() AppRepo {
-	return &appRepo{}
-}
-
-func (a *appRepo) GetAll(ctx context.Context) ([]*AppModel, error) {
+func (a *AppRepo) GetAll(ctx context.Context) ([]*AppModel, error) {
 	conn, err := db.AcquireConnection(ctx)
 	if err != nil {
 		return nil, err
@@ -65,7 +58,7 @@ func (a *appRepo) GetAll(ctx context.Context) ([]*AppModel, error) {
 	return apps, nil
 }
 
-func (a *appRepo) GetAllWithEnvs(ctx context.Context) ([]*AppWithEnvs, error) {
+func (a *AppRepo) GetAllWithEnvs(ctx context.Context) ([]*AppWithEnvs, error) {
 	conn, err := db.AcquireConnection(ctx)
 	if err != nil {
 		return nil, err
@@ -74,25 +67,71 @@ func (a *appRepo) GetAllWithEnvs(ctx context.Context) ([]*AppWithEnvs, error) {
 
 	rows, _ := conn.Query(
 		ctx,
-		`SELECT apps.id, apps.name, apps.description, app_envs.id, app_envs.name, app_envs.app_id
+		`SELECT apps.id, apps.name, apps.description, app_envs.id, app_envs.name
         FROM apps
         LEFT JOIN app_envs ON apps.id = app_envs.app_id
         ORDER BY apps.id
     `)
-    
-    pgx.ForEachRow(rows)
 
+	result := make([]*AppWithEnvs, 0)
+	scans := make([]any, 5)
+	_, err = pgx.ForEachRow(rows, scans, func() error {
+		appID, ok := scans[0].(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("cannot convert: %v to appID uuid", scans[0])
+		}
+		appName, ok := scans[1].(string)
+		if !ok {
+			return fmt.Errorf("cannot convert: %v to appName string", scans[1])
+		}
+		appDescription, ok := scans[2].(string)
+		if !ok {
+			return fmt.Errorf("cannot convert: %v to appDescription string", scans[2])
+		}
+		envID, ok := scans[3].(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("cannot convert: %v to envID uuid", scans[3])
+		}
+		envName, ok := scans[4].(string)
+		if !ok {
+			return fmt.Errorf("cannot convert: %v to envName string", scans[4])
+		}
+		if len(result) > 0 && appID == result[len(result)-1].ID {
+			result[len(result)-1].Envs = append(result[len(result)-1].Envs, &AppEnvModel{ID: envID, Name: envName, AppID: appID})
+		} else {
+			result = append(result, &AppWithEnvs{
+				AppModel: AppModel{
+					ID:          appID,
+					Name:        appName,
+					Description: appDescription,
+				},
+				Envs: []*AppEnvModel{
+					{
+						ID:    envID,
+						Name:  envName,
+						AppID: appID,
+					},
+				},
+			})
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (a *AppRepo) Create(ctx context.Context, data CreateApp) (*AppModel, error) {
 	return nil, nil
 }
 
-func (a *appRepo) Create(ctx context.Context, data CreateApp) (*AppModel, error) {
+func (a *AppRepo) GetByID(ctx context.Context, id uuid.UUID) (*AppModel, error) {
 	return nil, nil
 }
 
-func (a *appRepo) GetByID(ctx context.Context, id uuid.UUID) (*AppModel, error) {
-	return nil, nil
-}
-
-func (a *appRepo) GetByIDWithEnvs(ctx context.Context, id uuid.UUID) (*AppWithEnvs, error) {
+func (a *AppRepo) GetByIDWithEnvs(ctx context.Context, id uuid.UUID) (*AppWithEnvs, error) {
 	return nil, nil
 }
